@@ -226,20 +226,6 @@ read.xlsx.default <- function(xlsxFile,
     dn <- getNodes(xml = workbook, tagIn = "<definedNames>")
     dn <- unlist(regmatches(dn, gregexpr("<definedName [^<]*", dn, perl = TRUE)))
     
-    # namedRegion in between 'name="' and '"'
-    dn_namedRegion <- gsub(".*name=\"(\\w+)\".*", "\\1", dn)
-    
-    dn <- dn[which(dn_namedRegion == namedRegion)]
-    
-    if (length(dn) == 0) {
-      if (all(dn_namedRegion == "")) {
-        warning("Workbook has no named region.")
-      } else {
-        warning("Workbook has no such named region.")
-      }
-      return(invisible(NULL))
-    }
-    
     # search for sheetNames in list of named_region
     # sheet in between '>' and '!'
     dn_sheetNames <- gsub(".*[>]([^.]+)[!].*", "\\1", dn)
@@ -251,32 +237,42 @@ read.xlsx.default <- function(xlsxFile,
       dn_sheetNames[wsp] <- gsub("\\'|\\'", "", x = dn_sheetNames[wsp])
     }
     
-    # all valid sheets
-    found_sheets  <- dn_sheetNames[which(dn_sheetNames %in% sheetNames)]
+    # namedRegion in between 'name="' and '"'
+    dn_namedRegion <- gsub(".*name=\"(\\w+)\".*", "\\1", dn)
     
-    idx <- match(sheetNames, found_sheets)
+    if (length(dn) == 0) {
+        warning("Workbook has no named region.")
+      return(invisible(NULL))
+    }
     
+    if (all(dn_namedRegion != namedRegion)) {
+      warning("Workbook has no such named region.")
+      return(invisible(NULL))
+    }
+    
+    idx <- match(dn_namedRegion, namedRegion)
+    dn <- dn[which(!is.na(idx))]
+    
+    # a sheet was selected
     if (!nosheetselected) {
+      idx <- match(dn_sheetNames, sheetNames)
       idx <- which(idx == sheet)
-      if ( identical(idx, integer(0)) ) {
+      dn <- dn[idx]
+      # print(dn)
+        if ( identical(dn, character(0)) ) {
         warning("Workbook has no such named region on this sheet.")
         return(invisible(NULL))
       }
     }
     
-    # Todo: Replace with a selection option or bail entirely. This has the possibility to produce unwanted results.
     # Do not print warning if a specific sheet is requested
-    if ((length(idx) > 1) & nosheetselected) {
+    if ((length(dn) > 1) & nosheetselected) {
       msg <- c(sprintf("Region '%s' found on multiple sheets: \n", namedRegion),
                paste(dn_sheetNames, collapse = "\n"),
                "\nUsing the first appearance.")
       message(msg)
-      idx <- 1
+      dn <- dn[1]
     }
-    
-    # select selected dn
-    dn <- dn[idx]
-    
     
     region <-
       regmatches(dn, regexpr("(?<=>)[^\\<]+", dn, perl = TRUE))
@@ -472,7 +468,7 @@ read.xlsx.default <- function(xlsxFile,
 
   ## Remove cells where cell is NA (na.strings or empty sharedString '<si><t/></si>')
   if (length(cell_info$v) == 0) {
-    warning("No data found on worksheet.", call. = FALSE)
+    warning("No data found on worksheet.\n", call. = FALSE)
     return(NULL)
   }
 

@@ -70,7 +70,7 @@
 #'
 #' @export
 read.xlsx <- function(xlsxFile,
-                      sheet = 1,
+                      sheet,
                       startRow = 1,
                       colNames = TRUE,
                       rowNames = FALSE,
@@ -89,7 +89,7 @@ read.xlsx <- function(xlsxFile,
 
 #' @export
 read.xlsx.default <- function(xlsxFile,
-                              sheet = 1,
+                              sheet,
                               startRow = 1,
                               colNames = TRUE,
                               rowNames = FALSE,
@@ -108,6 +108,12 @@ read.xlsx.default <- function(xlsxFile,
 
   if (!file.exists(xlsxFile)) {
     stop("File does not exist.")
+  }
+  
+  nosheetselected <- FALSE
+  if (missing(sheet)) {
+    sheet <- 1
+    nosheetselected <- TRUE
   }
 
   if (grepl("\\.xls$|\\.xlm$", xlsxFile)) {
@@ -231,35 +237,46 @@ read.xlsx.default <- function(xlsxFile,
       } else {
         warning("Workbook has no such named region.")
       }
-      return(NULL)
+      return(invisible(NULL))
     }
     
     # search for sheetNames in list of named_region
     # sheet in between '>' and '!'
     dn_sheetNames <- gsub(".*[>]([^.]+)[!].*", "\\1", dn)
-    found_sheets  <- which(sheetNames %in% dn_sheetNames)
-
-    ind <- tolower(dn_namedRegion) == tolower(namedRegion)
-    ind <- ind[ind] # length can be > 1 keep only true
+    
+    # any whitespace in dn_sheetNames
+    wsp <- grepl(pattern = "'", dn_sheetNames)
+    if (any(wsp)) {
+      # sheetNames in between ''' and '''
+      dn_sheetNames[wsp] <- gsub("\\'|\\'", "", x = dn_sheetNames[wsp])
+    }
+    
+    # all valid sheets
+    found_sheets  <- dn_sheetNames[which(dn_sheetNames %in% sheetNames)]
+    
+    idx <- match(sheetNames, found_sheets)
+    
+    if (!nosheetselected) {
+      idx <- which(idx == sheet)
+      if ( identical(idx, integer(0)) ) {
+        warning("Workbook has no such named region on this sheet.")
+        return(invisible(NULL))
+      }
+    }
     
     # Todo: Replace with a selection option or bail entirely. This has the possibility to produce unwanted results.
     # Do not print warning if a specific sheet is requested
-    if ((length(ind) > 1) & (sheet == 1)) {
+    if ((length(idx) > 1) & nosheetselected) {
       msg <- c(sprintf("Region '%s' found on multiple sheets: \n", namedRegion),
                paste(dn_sheetNames, collapse = "\n"),
                "\nUsing the first appearance.")
       message(msg)
+      idx <- 1
     }
     
-    # use namedRegion from selected sheet. if this fails: fallback and pull out first node value
-    idx <- which(found_sheets == sheet)
+    # select selected dn
+    dn <- dn[idx]
     
-    if (!identical(idx, integer(0))) {
-      dn <- dn[idx]
-    } else {
-      message(sprintf("Region '%s' not found on selected sheet. Using the first appearance.", namedRegion))
-      dn <- dn[ind]
-    }
     
     region <-
       regmatches(dn, regexpr("(?<=>)[^\\<]+", dn, perl = TRUE))
@@ -271,8 +288,8 @@ read.xlsx.default <- function(xlsxFile,
       sheet <- sheet[which.max(nchar(sheet))]
     }
 
-    region <-
-      gsub("[^A-Z0-9:]", "", gsub(sheet, "", region, fixed = TRUE))[1]
+    region <- 
+      gsub("[^A-Z0-9:]", "", gsub(sheet, "", region, fixed = TRUE))
 
     if (grepl(":", region, fixed = TRUE)) {
       cols <-

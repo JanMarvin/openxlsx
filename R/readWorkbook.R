@@ -110,10 +110,10 @@ read.xlsx.default <- function(xlsxFile,
     stop("File does not exist.")
   }
   
-  nosheetselected <- FALSE
+  sheetselected <- TRUE
   if (missing(sheet)) {
     sheet <- 1
-    nosheetselected <- TRUE
+    sheetselected <- FALSE
   }
 
   if (grepl("\\.xls$|\\.xlm$", xlsxFile)) {
@@ -229,12 +229,23 @@ read.xlsx.default <- function(xlsxFile,
     # search for sheetNames in list of named_region
     # sheet in between '>' and '!'
     dn_sheetNames <- gsub(".*[>]([^.]+)[!].*", "\\1", dn)
+    dn_sheetNames <- unique(dn_sheetNames)
     
     # any whitespace in dn_sheetNames
+    # no : \ / ? * [ ]
     wsp <- grepl(pattern = "'", dn_sheetNames)
     if (any(wsp)) {
       # sheetNames in between ''' and '''
-      dn_sheetNames[wsp] <- gsub("\\'|\\'", "", x = dn_sheetNames[wsp])
+      dn_sheetNames[wsp] <- gsub("^'+|'+$", "\\1", dn_sheetNames[wsp])
+    }
+    
+    # TODO: it is possible, that the sheet is a linked File
+    linkedFile <- grepl(pattern = "\\\\", dn_sheetNames)
+    if (any(linkedFile)) {
+      warning("found linked sheet, this is currently unimplemented")
+      msg <- c("the sheet is:", paste(dn_sheetNames[linkedFile], sep = "\n"))
+      message(msg)
+      dn_sheetNames <- dn_sheetNames[!linkedFile]
     }
     
     # namedRegion in between 'name="' and '"'
@@ -254,19 +265,25 @@ read.xlsx.default <- function(xlsxFile,
     dn <- dn[which(!is.na(idx))]
     
     # a sheet was selected
-    if (!nosheetselected) {
+    if (sheetselected) {
       idx <- match(dn_sheetNames, sheetNames)
       idx <- which(idx == sheet)
       dn <- dn[idx]
-      # print(dn)
-        if ( identical(dn, character(0)) ) {
+      
+      if (length(dn) != 1) {
+        warning("unexpectedly found more than one dn.")
+        print(dn)
+        return(invisible(NULL))
+      }
+      
+      if ( identical(dn, character(0)) ) {
         warning("Workbook has no such named region on this sheet.")
         return(invisible(NULL))
       }
     }
     
     # Do not print warning if a specific sheet is requested
-    if ((length(dn) > 1) & nosheetselected) {
+    if ((length(dn) > 1) & (!sheetselected)) {
       msg <- c(sprintf("Region '%s' found on multiple sheets: \n", namedRegion),
                paste(dn_sheetNames, collapse = "\n"),
                "\nUsing the first appearance.")

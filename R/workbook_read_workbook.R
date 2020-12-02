@@ -17,7 +17,8 @@ read.xlsx.Workbook <- function(xlsxFile,
                                sep.names = ".",
                                namedRegion = NULL,
                                na.strings = "NA",
-                               fillMergedCells = FALSE) {
+                               fillMergedCells = FALSE,
+                               debug = FALSE) {
 
 
   ## Validate inputs and get files

@@ -25,6 +25,7 @@
 #' @param na.strings A character vector of strings which are to be interpreted as NA. Blank cells will be returned as NA.
 #' @param fillMergedCells If TRUE, the value in a merged cell is given to all cells within the merge.
 #' @param skipEmptyCols If \code{TRUE}, empty columns are skipped.
+#' @param debug If \code{TRUE}, debug information is returned.
 #' @seealso \code{\link{getNamedRegions}}
 #' @details Formulae written using writeFormula to a Workbook object will not get picked up by read.xlsx().
 #' This is because only the formula is written and left to be evaluated when the file is opened in Excel.
@@ -83,7 +84,8 @@ read.xlsx <- function(xlsxFile,
                       sep.names = ".",
                       namedRegion = NULL,
                       na.strings = "NA",
-                      fillMergedCells = FALSE) {
+                      fillMergedCells = FALSE,
+                      debug = FALSE) {
   UseMethod("read.xlsx", xlsxFile)
 }
 
@@ -102,7 +104,8 @@ read.xlsx.default <- function(xlsxFile,
                               sep.names = ".",
                               namedRegion = NULL,
                               na.strings = "NA",
-                              fillMergedCells = FALSE) {
+                              fillMergedCells = FALSE,
+                              debug = FALSE) {
   ## Validate inputs and get files
   xlsxFile <- getFile(xlsxFile)
 
@@ -223,13 +226,25 @@ read.xlsx.default <- function(xlsxFile,
   ## Named region logic
   reading_named_region <- FALSE
   if (!is.null(namedRegion)) {
-    dn <- getNodes(xml = workbook, tagIn = "<definedNames>")
+    dn <- dnn <-  getNodes(xml = workbook, tagIn = "<definedNames>")
     dn <- unlist(regmatches(dn, gregexpr("<definedName [^<]*", dn, perl = TRUE)))
+    
+    if (debug) {
+      message("dnn")
+      print(dnn)
+      
+      message("dn")
+      print(dn)
+    }
     
     # search for sheetNames in list of named_region
     # sheet in between '>' and '!'
     dn_sheetNames <- gsub(".*[>]([^.]+)[!].*", "\\1", dn)
-    dn_sheetNames <- unique(dn_sheetNames)
+    
+    if (debug) {
+      message("dn_sheetNames")
+      print(dn_sheetNames)
+    }
     
     # any whitespace in dn_sheetNames
     # no : \ / ? * [ ]
@@ -245,7 +260,9 @@ read.xlsx.default <- function(xlsxFile,
       warning("found linked sheet, this is currently unimplemented")
       msg <- c("the sheet is:", paste(dn_sheetNames[linkedFile], sep = "\n"))
       message(msg)
+      
       dn_sheetNames <- dn_sheetNames[!linkedFile]
+      dn <- dn[!linkedFile]
     }
     
     # namedRegion in between 'name="' and '"'
@@ -256,21 +273,45 @@ read.xlsx.default <- function(xlsxFile,
       return(invisible(NULL))
     }
     
+    if (debug) {
+      message("dn_namedRegion")
+      print(dn_namedRegion)
+      message("namedRegion")
+      print(namedRegion)
+    }
+    
     if (all(dn_namedRegion != namedRegion)) {
       warning("Workbook has no such named region.")
       return(invisible(NULL))
     }
     
     idx <- match(dn_namedRegion, namedRegion)
+    
+    if (debug) {
+      message("idx")
+      print(idx)
+    }
+    
     dn <- dn[which(!is.na(idx))]
+    dn_namedRegion <- dn_namedRegion[which(!is.na(idx))]
+    dn_sheetNames <- dn_sheetNames[which(!is.na(idx))]
+    
+    if (debug) {
+      message("dn")
+      print(dn)
+    }
     
     # a sheet was selected
     if (sheetselected) {
       idx <- match(dn_sheetNames, sheetNames)
-      idx <- which(idx == sheet)
+      if (is.numeric(sheet)) {
+        idx <- which(idx == sheet)
+      } else {
+        idx <- which(dn_sheetNames == sheet)
+      }
       dn <- dn[idx]
       
-      if (length(dn) != 1) {
+      if (length(dn) > 1) {
         warning("unexpectedly found more than one dn.")
         print(dn)
         return(invisible(NULL))
@@ -288,7 +329,10 @@ read.xlsx.default <- function(xlsxFile,
                paste(dn_sheetNames, collapse = "\n"),
                "\nUsing the first appearance.")
       message(msg)
+      
       dn <- dn[1]
+      dn_namedRegion <- dn_namedRegion[1]
+      dn_sheetNames <- dn_sheetNames[1]
     }
     
     region <-
@@ -678,7 +722,8 @@ readWorkbook <- function(xlsxFile,
                          sep.names = ".",
                          namedRegion = NULL,
                          na.strings = "NA",
-                         fillMergedCells = FALSE) {
+                         fillMergedCells = FALSE,
+                         debug = FALSE) {
   read.xlsx(
     xlsxFile = xlsxFile,
     sheet = sheet,
@@ -694,6 +739,7 @@ readWorkbook <- function(xlsxFile,
     sep.names = ".",
     namedRegion = namedRegion,
     na.strings = na.strings,
-    fillMergedCells = fillMergedCells
+    fillMergedCells = fillMergedCells,
+    debug = debug
   )
 }

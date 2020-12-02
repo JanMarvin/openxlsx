@@ -19,7 +19,8 @@ read.xlsx(
   sep.names = ".",
   namedRegion = NULL,
   na.strings = "NA",
-  fillMergedCells = FALSE
+  fillMergedCells = FALSE,
+  debug = FALSE
 )
 }
 \arguments{
@@ -57,6 +58,8 @@ are checked to ensure that they are syntactically valid variable names}
 \item{na.strings}{A character vector of strings which are to be interpreted as NA. Blank cells will be returned as NA.}
 
 \item{fillMergedCells}{If TRUE, the value in a merged cell is given to all cells within the merge.}
+
+\item{debug}{If \code{TRUE}, debug information is returned.}
 }
 \value{
 data.frame

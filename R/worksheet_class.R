@@ -169,9 +169,11 @@ WorkSheet$methods(get_post_sheet_data = function() {
   }
 
   if (length(autoFilter) > 0) {
-    autoFilter_close <- addClosing(autoFilter)
-    autoFilter <<- paste0(autoFilter, autoFilter_close)
-    xml <- paste0(xml, autoFilter, collapse = "")
+    autoFilter_str       <- as.character(autoFilter)
+    autoFilter_str_close <- addClosing(autoFilter_str)
+    autoFilter_str       <- paste0(autoFilter_str, autoFilter_str_close)
+    
+    xml <- paste0(xml, autoFilter_str, collapse = "")
   }
 
   if (length(mergeCells) > 0) {

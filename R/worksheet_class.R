@@ -130,12 +130,44 @@ WorkSheet$methods(get_prior_sheet_data = function() {
 
 WorkSheet$methods(get_post_sheet_data = function() {
   xml <- ""
+  
+  # helper function to identify if a closing tag is found. if not a a closing
+  # tag is added
+  addClosing <- function(xml) {
+    
+    z <- ""
+    
+    opening <- unlist(regmatches(xml, gregexpr("<(\\w+)",  xml, perl = TRUE)))
+    closing <- unlist(regmatches(xml, gregexpr("</(\\w+)", xml, perl = TRUE)))
+    
+    names(opening) <- gsub("<",  "", opening)
+    names(closing) <- gsub("</", "", closing)
+    
+    if (!identical(closing, character(0))) {
+      closed <- match(names(opening), names(closing), nomatch = FALSE)
+    } else {
+      closed <- rep(0, length(opening))
+    }
+    
+    # message(opening)
+    # message(closing)
+    # message(closed)
+    
+    if (any(closed == 0)) {
+      close <- paste0("</", names(opening)[closed == 0], ">")
+      z <- paste(close[order(close, decreasing = TRUE)], collapse = "")
+    }
+    
+    z
+  }
 
   if (length(sheetProtection) > 0) {
     xml <- paste0(xml, sheetProtection, collapse = "")
   }
 
   if (length(autoFilter) > 0) {
+    autoFilter_close <- addClosing(autoFilter)
+    autoFilter <- paste0(autoFilter, autoFilter_close)
     xml <- paste0(xml, autoFilter, collapse = "")
   }
 

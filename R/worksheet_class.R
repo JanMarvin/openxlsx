@@ -168,7 +168,7 @@ WorkSheet$methods(get_post_sheet_data = function() {
 
   if (length(autoFilter) > 0) {
     autoFilter_close <- addClosing(autoFilter)
-    autoFilter <- paste0(autoFilter, autoFilter_close)
+    autoFilter <<- paste0(autoFilter, autoFilter_close)
     xml <- paste0(xml, autoFilter, collapse = "")
   }
 

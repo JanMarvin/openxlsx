@@ -137,7 +137,8 @@ WorkSheet$methods(get_post_sheet_data = function() {
     
     z <- ""
     
-    opening <- unlist(regmatches(xml, gregexpr("<(\\w+)",  xml, perl = TRUE)))
+    # create opening and closing. where opening ignores cases like <a/>
+    opening <- unlist(regmatches(xml, gregexpr("(?!.*/>)(<(\\w+))",  xml, perl = TRUE)))
     closing <- unlist(regmatches(xml, gregexpr("</(\\w+)", xml, perl = TRUE)))
     
     names(opening) <- gsub("<",  "", opening)

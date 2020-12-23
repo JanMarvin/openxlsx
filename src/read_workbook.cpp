@@ -364,7 +364,7 @@ List getCellInfo(std::string xmlFile,
             v[i] = sharedStrings[ss_ind];
             
             if(v[i] == "openxlsx_na_vlu"){
-              v[i] = NA_STRING;
+              v[i] = "";
             }
             
             string_refs[i] = r[i];
